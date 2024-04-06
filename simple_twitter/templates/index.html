@@ -12,7 +12,19 @@
     <h2>Chats</h2>
     <ul>
         {% for chat in chats %}
-        <li>{{ chat.author.username }} says: {{ chat.content }}</li>
+        <li>{{ chat.user_id}} says at fdsfa {{chat.timestamp}}: {{ chat.content }} </li>
+        {% endfor %}
+    </ul>
+    <h2>Follow Users</h2>
+    <ul>
+        {% for user in all_users %}
+            <li>{{ user.username }}
+                {% if current_user.is_following(user) %}
+                    <a href="{{ url_for('unfollow', username=user.username) }}">Unfollow</a>
+                {% else %}
+                    <a href="{{ url_for('follow', username=user.username) }}">Follow</a>
+                {% endif %}
+            </li>
         {% endfor %}
     </ul>
     <a href="/logout">Logout</a>

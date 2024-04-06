@@ -1,9 +1,10 @@
 from flask import render_template, url_for, redirect, request
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask import flash
 
 from simple_twitter import app, db, login_manager
-from simple_twitter.models import User, Chat
+from simple_twitter.models import User, Chat, followers
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -12,8 +13,15 @@ def load_user(user_id):
 @app.route('/')
 @login_required
 def index():
-    chats = Chat.query.all()
-    return render_template('index.html', chats=chats)
+    followed_chats = Chat.query.join(
+        followers, (followers.c.followed_id == Chat.user_id)
+    ).filter(
+        followers.c.follower_id == current_user.id
+    ).order_by(
+        Chat.timestamp.desc()
+    )
+    all_users = User.query.all()
+    return render_template('index.html', chats=followed_chats, all_users=all_users)
 
 # Add routes for register, login, logout, and post chat here
 # Register route
@@ -59,7 +67,37 @@ def logout():
 @login_required
 def post_chat():
     content = request.form.get('content')
-    new_chat = Chat(content=content, author=current_user)
+    new_chat = Chat(content=content, user_id=current_user.id)
     db.session.add(new_chat)
     db.session.commit()
+    return redirect(url_for('index'))
+
+@app.route('/follow/<username>')
+@login_required
+def follow(username):
+    user = User.query.filter_by(username=username).first()
+    if user is None:
+        flash('User {} not found.'.format(username))
+        return redirect(url_for('index'))
+    # if user == current_user:
+    #     flash('You cannot follow yourself!')
+    #     return redirect(url_for('index'))
+    current_user.follow(user)
+    db.session.commit()
+    flash('You are now following {}!'.format(username))
+    return redirect(url_for('index'))
+
+@app.route('/unfollow/<username>')
+@login_required
+def unfollow(username):
+    user = User.query.filter_by(username=username).first()
+    if user is None:
+        flash('User {} not found.'.format(username))
+        return redirect(url_for('index'))
+    # if user == current_user:
+    #     flash('You cannot unfollow yourself!')
+    #     return redirect(url_for('index'))
+    current_user.unfollow(user)
+    db.session.commit()
+    flash('You are no longer following {}.'.format(username))
     return redirect(url_for('index'))
