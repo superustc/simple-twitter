@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Twitter</title>
+</head>
+<body>
+    <h2>Post a Chat</h2>
+    <form method="post" action="/post_chat">
+        <textarea name="content" placeholder="What's happening?" required></textarea>
+        <input type="submit" value="Post">
+    </form>
+    <h2>Chats</h2>
+    <ul>
+        {% for chat in chats %}
+        <li>{{ chat.author.username }} says: {{ chat.content }}</li>
+        {% endfor %}
+    </ul>
+    <a href="/logout">Logout</a>
+</body>
+</html>
