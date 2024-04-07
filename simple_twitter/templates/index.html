@@ -2,31 +2,55 @@
 <html>
 <head>
     <title>Simple Twitter</title>
+    <script src="https://cdn.socket.io/3.1.3/socket.io.min.js"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            // Function to fetch chat data and update the page
-            function updateChats() {
-                fetch('/get_chats')
-                    .then(response => response.json())
-                    .then(data => {
-                        const chatList = document.querySelector('#chat-list');
-                        chatList.innerHTML = ''; // Clear current chat list
-                        data.forEach(chat => {
-                            const listItem = `<li>${chat.username} ${chat.timestamp} <br> ${chat.content}</li>`;
-                            chatList.innerHTML += listItem; // Add each chat to the list
-                        });
-                    })
-                    .catch(error => console.error('Error fetching chats:', error));
-            }
+    document.addEventListener("DOMContentLoaded", function() {
+        // Connect to Socket.IO on the server.
+        var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/chatsocket');
 
-            // Update chats every 1 second
-            setInterval(updateChats, 1000);
+        function addChatItem(data, toPrepend=false) {
+            const chatList = document.querySelector('#chat-list');
+            if (!chatList) {
+                console.error('Chat list element not found!');
+                return;
+            }
+            const listItem = document.createElement('li');
+            listItem.innerHTML = `${data.username} ${data.timestamp} <br> ${data.content}`;
+            if (toPrepend) {
+                chatList.prepend(listItem);
+            } else {
+                chatList.appendChild(listItem);
+            }
+        }
+
+        function addChatItemToTail(data) {
+            addChatItem(data, false);
+        }
+
+        // Handle incoming chat messages.
+        socket.on('new_chat', function(data) {
+            addChatItem(data, true);
         });
+
+        // Submit a new chat message.
+        document.querySelector('#post-chat-form').onsubmit = function(e) {
+            e.preventDefault();
+            const contentInput = document.querySelector('textarea[name="content"]');
+            const message = contentInput.value;
+            socket.emit('send_chat', {'content': message}); // Emit the message to the server.
+            contentInput.value = ''; // Clear the input after sending.
+        };
+
+        // Fetch chat history on page load
+        fetch('/get_chats').then(response => response.json()).then(chats => {
+            chats.forEach(addChatItemToTail);
+        }).catch(error => console.error('Error fetching chat history:', error));
+    });
     </script>
 </head>
 <body>
     <h2>Post a Chat</h2>
-    <form method="post" action="/post_chat">
+    <form id="post-chat-form">
         <textarea name="content" placeholder="What's happening?" required></textarea>
         <input type="submit" value="Post">
     </form>

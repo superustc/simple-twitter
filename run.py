@@ -1,4 +1,5 @@
-from simple_twitter import app
+from simple_twitter import app, socketio
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.debug = True
+    socketio.run(app, debug=True)

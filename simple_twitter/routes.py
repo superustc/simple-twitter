@@ -3,8 +3,9 @@ from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import flash, jsonify
 
-from simple_twitter import app, db, login_manager
+from simple_twitter import app, db, login_manager, socketio
 from simple_twitter.models import User, Chat, followers
+from datetime import datetime
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -94,10 +95,49 @@ def logout():
 @login_required
 def post_chat():
     content = request.form.get('content')
+    if not content:
+        return redirect(url_for('index'))  # Redirect or handle error as appropriate
+
+    # Create a new ChatMessage instance
+    new_chat = Chat(content=content, user_id=current_user.id)
+    db.session.add(new_chat)
+    
+    try:
+        db.session.commit()
+        #Prepare the message for broadcasting
+        chat_message = {
+            'username': new_chat.username,
+            'timestamp': new_chat.timestamp.strftime('%Y-%m-%d %H:%M:%S'),  # Format timestamp as a string
+            'content': new_chat.content
+        }
+        print('Emitting message:', chat_message)
+        # Emit the message to all connected clients
+        socketio.emit('new_chat', chat_message, namespace='/chatsocket', broadcast=True)
+    except Exception as e:
+        print(e)  # For debugging
+        db.session.rollback()
+        # Handle error (e.g., log it, inform the user)
+    
+    return redirect(url_for('index'))  # Redirect back to the chat page or handle as
+
+@socketio.on('connect', namespace='/chatsocket')
+def handle_connect():
+    print('Client connected')
+
+@socketio.on('disconnect', namespace='/chatsocket')
+def handle_disconnect():
+    print('Client disconnected')
+
+@socketio.on('send_chat', namespace='/chatsocket')
+def handle_chat_message(message):
+    content = message.get('content')
+    if not content:
+        return
     new_chat = Chat(content=content, user_id=current_user.id)
     db.session.add(new_chat)
     db.session.commit()
-    return redirect(url_for('index'))
+    # Then broadcast the new chat message to all clients
+    socketio.emit('new_chat', {'content': new_chat.content, 'timestamp': new_chat.timestamp.strftime('%Y-%m-%d %H:%M:%S'), 'username': current_user.username}, namespace='/chatsocket', broadcast=True)
 
 @app.route('/follow/<username>')
 @login_required
