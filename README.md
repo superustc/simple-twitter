@@ -28,8 +28,6 @@ python run.py
 After starting the application, navigate to http://localhost:5000 in your web browser to access the chat application.
 
 ## Screenshot
-![register](https://github.com/superustc/simple-twitter/blob/main/figures/register.png?raw=true "register")
-
 ![login](https://github.com/superustc/simple-twitter/blob/main/figures/login.png?raw=true "login")
 
 ![chat](https://github.com/superustc/simple-twitter/blob/main/figures/chat.png?raw=true "chat")
