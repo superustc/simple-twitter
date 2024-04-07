@@ -11,30 +11,7 @@ from datetime import datetime
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-@app.route('/')
-@login_required
-def index():
-    followed_chats_query = Chat.query.join(
-        followers, (followers.c.followed_id == Chat.user_id)
-    ).filter(
-        followers.c.follower_id == current_user.id
-    ).join(User, User.id == Chat.user_id).add_columns(
-        User.username, Chat.content, Chat.timestamp
-    ).order_by(
-        Chat.timestamp.desc()
-    ).all()
-
-    followed_chats = [
-        {'username': chat.username, 'content': chat.content, 'timestamp': chat.timestamp}
-        for chat in followed_chats_query
-    ]
-
-    all_users = User.query.all()
-    return render_template('index.html', chats=followed_chats, all_users=all_users)
-
-@app.route('/get_chats')
-@login_required
-def get_chats():
+def get_chat():
     followed_chats_query = Chat.query.join(
         followers, (followers.c.followed_id == Chat.user_id)
     ).filter(
@@ -49,7 +26,19 @@ def get_chats():
         {'username': chat.username, 'content': chat.content, 'timestamp': chat.timestamp.strftime('%Y-%m-%d %H:%M:%S')}
         for chat in followed_chats_query
     ]
-    return jsonify(chats)
+    return chats
+
+@app.route('/')
+@login_required
+def index():
+    followed_chats = {} #get_chat() to use the old http post method
+    all_users = User.query.all()
+    return render_template('index.html', chats=followed_chats, all_users=all_users)
+
+@app.route('/get_chats')
+@login_required
+def get_chats():
+    return jsonify(get_chat())
 
 # Add routes for register, login, logout, and post chat here
 # Register route
@@ -90,7 +79,7 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-# Post chat route
+# Post chat route using http post method
 @app.route('/post_chat', methods=['POST'])
 @login_required
 def post_chat():
@@ -110,24 +99,11 @@ def post_chat():
             'timestamp': new_chat.timestamp.strftime('%Y-%m-%d %H:%M:%S'),  # Format timestamp as a string
             'content': new_chat.content
         }
-        print('Emitting message:', chat_message)
-        # Emit the message to all connected clients
-        socketio.emit('new_chat', chat_message, namespace='/chatsocket', broadcast=True)
-    except Exception as e:
-        print(e)  # For debugging
+    except:
         db.session.rollback()
-        # Handle error (e.g., log it, inform the user)
-    
     return redirect(url_for('index'))  # Redirect back to the chat page or handle as
 
-@socketio.on('connect', namespace='/chatsocket')
-def handle_connect():
-    print('Client connected')
-
-@socketio.on('disconnect', namespace='/chatsocket')
-def handle_disconnect():
-    print('Client disconnected')
-
+# post chat route using socketio
 @socketio.on('send_chat', namespace='/chatsocket')
 def handle_chat_message(message):
     content = message.get('content')
@@ -138,6 +114,14 @@ def handle_chat_message(message):
     db.session.commit()
     # Then broadcast the new chat message to all clients
     socketio.emit('new_chat', {'content': new_chat.content, 'timestamp': new_chat.timestamp.strftime('%Y-%m-%d %H:%M:%S'), 'username': current_user.username}, namespace='/chatsocket', broadcast=True)
+
+@socketio.on('connect', namespace='/chatsocket')
+def handle_connect():
+    print('Client connected')
+
+@socketio.on('disconnect', namespace='/chatsocket')
+def handle_disconnect():
+    print('Client disconnected')
 
 @app.route('/follow/<username>')
 @login_required
