@@ -1,7 +1,7 @@
 from flask import render_template, url_for, redirect, request
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask import flash
+from flask import flash, jsonify
 
 from simple_twitter import app, db, login_manager
 from simple_twitter.models import User, Chat, followers
@@ -30,6 +30,25 @@ def index():
 
     all_users = User.query.all()
     return render_template('index.html', chats=followed_chats, all_users=all_users)
+
+@app.route('/get_chats')
+@login_required
+def get_chats():
+    followed_chats_query = Chat.query.join(
+        followers, (followers.c.followed_id == Chat.user_id)
+    ).filter(
+        followers.c.follower_id == current_user.id
+    ).join(User, User.id == Chat.user_id).add_columns(
+        User.username, Chat.content, Chat.timestamp
+    ).order_by(
+        Chat.timestamp.desc()
+    ).all()
+
+    chats = [
+        {'username': chat.username, 'content': chat.content, 'timestamp': chat.timestamp.strftime('%Y-%m-%d %H:%M:%S')}
+        for chat in followed_chats_query
+    ]
+    return jsonify(chats)
 
 # Add routes for register, login, logout, and post chat here
 # Register route

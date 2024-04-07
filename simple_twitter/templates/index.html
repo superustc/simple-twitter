@@ -2,6 +2,27 @@
 <html>
 <head>
     <title>Simple Twitter</title>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Function to fetch chat data and update the page
+            function updateChats() {
+                fetch('/get_chats')
+                    .then(response => response.json())
+                    .then(data => {
+                        const chatList = document.querySelector('#chat-list');
+                        chatList.innerHTML = ''; // Clear current chat list
+                        data.forEach(chat => {
+                            const listItem = `<li>${chat.username} ${chat.timestamp} <br> ${chat.content}</li>`;
+                            chatList.innerHTML += listItem; // Add each chat to the list
+                        });
+                    })
+                    .catch(error => console.error('Error fetching chats:', error));
+            }
+
+            // Update chats every 1 second
+            setInterval(updateChats, 1000);
+        });
+    </script>
 </head>
 <body>
     <h2>Post a Chat</h2>
@@ -10,10 +31,8 @@
         <input type="submit" value="Post">
     </form>
     <h2>Chats</h2>
-    <ul>
-        {% for chat in chats %}
-        <li>{{ chat['username'] }} {{ chat['timestamp'] }} <br> {{ chat['content'] }}</li>
-        {% endfor %}
+    <ul id="chat-list">
+        <!-- Chat items will be added here by JavaScript -->
     </ul>
     <h2>Follow Users</h2>
     <ul>
