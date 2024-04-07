@@ -13,13 +13,21 @@ def load_user(user_id):
 @app.route('/')
 @login_required
 def index():
-    followed_chats = Chat.query.join(
+    followed_chats_query = Chat.query.join(
         followers, (followers.c.followed_id == Chat.user_id)
     ).filter(
         followers.c.follower_id == current_user.id
+    ).join(User, User.id == Chat.user_id).add_columns(
+        User.username, Chat.content, Chat.timestamp
     ).order_by(
         Chat.timestamp.desc()
-    )
+    ).all()
+
+    followed_chats = [
+        {'username': chat.username, 'content': chat.content, 'timestamp': chat.timestamp}
+        for chat in followed_chats_query
+    ]
+
     all_users = User.query.all()
     return render_template('index.html', chats=followed_chats, all_users=all_users)
 

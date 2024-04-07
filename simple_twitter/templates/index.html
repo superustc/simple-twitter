@@ -12,7 +12,7 @@
     <h2>Chats</h2>
     <ul>
         {% for chat in chats %}
-        <li>{{ chat.user_id}} says at fdsfa {{chat.timestamp}}: {{ chat.content }} </li>
+        <li>{{ chat['username'] }} {{ chat['timestamp'] }} <br> {{ chat['content'] }}</li>
         {% endfor %}
     </ul>
     <h2>Follow Users</h2>
