@@ -85,23 +85,11 @@ def logout():
 def post_chat():
     content = request.form.get('content')
     if not content:
-        return redirect(url_for('index'))  # Redirect or handle error as appropriate
+        return redirect(url_for('index'))
 
-    # Create a new ChatMessage instance
-    new_chat = Chat(content=content, user_id=current_user.id)
-    db.session.add(new_chat)
-    
-    try:
-        db.session.commit()
-        #Prepare the message for broadcasting
-        chat_message = {
-            'username': new_chat.username,
-            'timestamp': new_chat.timestamp.strftime('%Y-%m-%d %H:%M:%S'),  # Format timestamp as a string
-            'content': new_chat.content
-        }
-    except:
-        db.session.rollback()
-    return redirect(url_for('index'))  # Redirect back to the chat page or handle as
+    db.session.add(Chat(content=content, user_id=current_user.id))
+    db.session.commit()
+    return redirect(url_for('index'))
 
 # post chat route using socketio
 @socketio.on('send_chat', namespace='/chatsocket')
