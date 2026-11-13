@@ -28,6 +28,9 @@ jobs:
       (github.event_name == 'schedule' ||
       (github.actor == 'superustc' && github.triggering_actor == 'superustc'))
     runs-on: ubuntu-latest
+    environment:
+      name: OPENAI_API_KEY
+      deployment: false
     timeout-minutes: 10
     permissions:
       contents: read
@@ -61,7 +64,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           if [[ -z "$OPENAI_API_KEY" ]]; then
-            echo "::error::OPENAI_API_KEY is unavailable. Add it under Settings > Secrets and variables > Actions > Repository secrets, then start a new workflow run."
+            echo "::error::OPENAI_API_KEY is unavailable. Check the OPENAI_API_KEY environment secret or the Actions repository secret, then start a new workflow run."
             exit 1
           fi
       - name: Record the daily reservation
@@ -92,6 +95,9 @@ jobs:
     needs: plan
     if: needs.plan.outputs.has_issues == 'true'
     runs-on: ubuntu-latest
+    environment:
+      name: OPENAI_API_KEY
+      deployment: false
     timeout-minutes: 10
     permissions:
       contents: read
