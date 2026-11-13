@@ -3,6 +3,6 @@
     "core": ["read_file", "list_directory", "glob", "grep_search", "replace", "write_file"]
   },
   "mcp": {"allowed": []},
-  "extensions": {"enabled": false},
+  "extensions": {"disabled": true},
   "general": {"enableAutoUpdate": false}
 }
