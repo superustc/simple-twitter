@@ -43,7 +43,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --json title,body,state             --jq 'select(.state == "OPEN") | (.title + "\n\n" + .body)' > issue-task.txt
+          gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --json title,body,state \
+            --jq 'select(.state == "OPEN") | (.title + "\n\n" + .body)' > issue-task.txt
           test -s issue-task.txt || { echo "Issue not found or not open"; exit 1; }
           cat > .codex-task.md <<'PROMPT'
           You are implementing a single owner-approved GitHub issue in this repository.
@@ -95,7 +96,16 @@ jobs:
         run: |
           set -euo pipefail
           rm -f .codex-task.md issue-task.txt
-          git add -A
+          # Exclude runtime databases, secrets, workflow policy and task prompt files.
+          git add -A -- . \
+            ':(exclude)AGENTS.md' \
+            ':(exclude).github/workflows/**' \
+            ':(exclude)**/*.db' \
+            ':(exclude)**/*.sqlite' \
+            ':(exclude)**/*.sqlite3' \
+            ':(exclude)**/.env*' \
+            ':(exclude).codex-task.md' \
+            ':(exclude)issue-task.txt'
           if git diff --cached --quiet; then
             echo "Codex produced no changes; no PR created."
             exit 1
