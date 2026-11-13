@@ -1,38 +1,32 @@
-# Codex issue-to-PR pilot
+# Issue-to-draft-PR automation
 
-This opt-in pipeline is a **manual** first step toward an Enzyme-style issue scanner and multi-agent development system. It never merges PRs or deploys the app.
+The workflow scans open issues and pull requests, ranks eligible tasks, assigns approved issues to isolated GitHub-hosted runners, validates proposed patches, and opens draft pull requests after independent review. Maintainers decide when to merge.
 
-## What is set up
-- `AGENTS.md`: repository instructions for coding agents.
-- `.github/workflows/codex-pilot.yml`: manual workflow taking one issue number, invoking the official `openai/codex-action`, running tests, and opening a **draft PR** only after tests pass.
-- Pilot issue: https://github.com/superustc/simple-twitter/issues/1
-- Staged plan: https://github.com/superustc/simple-twitter/issues/2
+## Setup
 
-## One-time prerequisites (owner)
-1. Review and merge the bootstrap PR so the workflow is available from the default branch. Do not turn on schedules yet.
-2. Create an OpenAI API key for this automation (OpenAI API usage is separate from ChatGPT subscriptions).
-3. Set the repository Actions secret **OPENAI_API_KEY** in repository Settings → Secrets and variables → Actions.
-4. Confirm GitHub Actions is permitted to create pull requests (repository Settings → Actions → General → Workflow permissions, if this setting is exposed and editable).
-5. Keep branch protections and required human review for `main`.
+1. Review and merge the workflow PR. Keep the repository's existing branch protection and review rules.
+2. In **Settings → Secrets and variables → Actions**, add the `OPENAI_API_KEY` repository secret. Codex uses it for the single-issue pilot, optional AI triage, and independent review.
+3. Under **Settings → Actions → General → Workflow permissions**, enable **Allow GitHub Actions to create and approve pull requests**. The pipeline only creates draft pull requests.
+4. Keep `AGENT_WORKERS` unset for Codex-only operation, or set it to a comma-separated list such as `codex,claude,gemini`. Add `ANTHROPIC_API_KEY` for Claude Code and `GEMINI_API_KEY` for Gemini CLI before adding those workers. Each worker receives only its provider's secret. Codex supplies independent review for all workers.
 
-## Run the first test
-- Open Actions → **Codex issue pilot** → Run workflow.
-- Set `issue_number` to `1`.
-- The workflow runs only when triggered by repository owner `superustc`, reads the issue, starts Codex with restricted workspace permissions, runs `python test_app.py`, and creates a draft PR if changes pass.
-- Review the draft PR and CI logs; do not merge until the bug and tests are verified.
+## First runs
 
-## Why only manual dispatch now?
-GitHub Issues may contain malicious or misleading instructions. Automatic triage should never translate untrusted issue body text into unrestricted CI jobs. The manual owner gate limits the blast radius until basic correctness, token costs, and review quality are known.
+Open **Actions → Issue to draft PR → Run workflow**, selecting `main`.
 
-## Next milestones
-1. Pilot produces a reviewable draft PR for #1.
-2. Fix any CI breakage, confirm isolated SQLite test setup, and record outcome.
-3. Add a read-only daily triage workflow for approved issue labels only.
-4. Add per-issue concurrency limits, duplicate-PR checks, retry bounds, and budget tracking.
-5. Add Gemini/Claude workers and an independent reviewer *after* a sustained passing pilot.
+- **Triage**. Leave `issue_number` at 0 and leave `run_approved` off. Download the JSON report from the run. When an OpenAI key is configured, the separate AI advisory adds suggested priority, severity, scope, dependencies, risk, and validation effort.
+- **Single issue**. Enter an open issue number. The dispatch must come from the owner account, and it selects Codex. An issue with an existing draft or PR will be rejected. The initial HTTP chat pilot is tracked in [issue #1](https://github.com/superustc/simple-twitter/issues/1) and [PR #4](https://github.com/superustc/simple-twitter/pull/4). To validate the hosted worker while that fix is under review, dispatch a different small issue with a clear reproduction and test.
+- **Approved batch**. Create the label `agent:approved` and apply it after reviewing scope and testability. Leave `issue_number` at 0 and turn on `run_approved`. The workflow reserves at most three coding jobs per UTC day across manual and scheduled runs and executes at most two issues concurrently.
 
-## Failure modes
-- No `OPENAI_API_KEY`: fail before calling Codex. Do not commit API keys or place them into issue text.
-- Dependency/test errors: stop without creating a PR and inspect the Actions logs.
-- Zero code changes: stop without creating a PR.
-- AI produces incorrect code or falsely claims test results: runner checks the actual test exit code and human review remains required.
+The daily schedule runs at 14:23 UTC. It reports triage by default. After a successful single-issue hosted pilot and three independently selected tasks complete with credible verification, set the repository variable `AGENT_AUTOMATION` to `true` to enable scheduled coding. Remove it to return to triage.
+
+## Selection and validation
+
+- The deterministic shortlist uses reproduction and validation cues, severity labels, declared dependencies, and risk labels. An open PR referencing the issue or using its deterministic branch blocks duplicate dispatch. Labels `security`, `dependencies`, `agent:blocked`, and `agent:high-risk` block unattended execution. The AI report is advisory.
+- An implementation job uses a fresh checkout and read-only GitHub permissions. Its scope is regular text files in the application, the test file, README, and the entry point. Codex can retry an empty or rejected patch once. Failed builds, tests, or reviews stop publication. Inspect the artifacts and logs before dispatching a revised task.
+- A fresh verification runner applies the patch to the original base, checks its scope, compiles Python source, and runs `python -B test_app.py` without provider secrets or write access. A separate read-only Codex job reviews the proposed patch and test quality. Publication requires an approval verdict with no findings.
+- A fresh publisher checks the issue, branch, and open PRs again, applies the verified patch, and pushes `agent/issue-N` before opening a draft. It refuses to overwrite a branch with different changes. If the push succeeds but PR creation fails, the same patch can reuse the existing branch. If `main` advances before publication, dispatch from the new base.
+- GitHub may require a maintainer to select **Approve workflows to run** on a bot-created PR. The workflow already runs its independent verification before publishing. See [GitHub's token event rules](https://docs.github.com/en/actions/concepts/security/github_token#when-github_token-triggers-workflows).
+
+## Evidence
+
+Each workflow run retains its shortlist, coding-slot reservations, proposed patches, reviewer verdicts, job outcomes, and draft URLs. Use **Re-run all jobs** for a full replay so artifacts and the daily reservation correspond to one attempt. When reviewing the pilot, record candidate count, test/review failures, elapsed time, provider usage from its billing dashboard, and accepted PRs. The three-job budget measures admitted coding jobs. Review, advisory calls, and a Codex retry are additional model calls.
