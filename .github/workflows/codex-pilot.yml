@@ -55,6 +55,15 @@ jobs:
           flags=()
           if [[ "$EXECUTE" == true ]]; then flags+=(--execute); fi
           python3 .github/agents/pipeline.py plan "$RUNNER_TEMP/triage" "$ISSUE" "$WORKERS" "${flags[@]}"
+      - name: Check OpenAI secret for coding and review
+        if: steps.plan.outputs.has_jobs == 'true'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [[ -z "$OPENAI_API_KEY" ]]; then
+            echo "::error::OPENAI_API_KEY is unavailable. Add it under Settings > Secrets and variables > Actions > Repository secrets, then start a new workflow run."
+            exit 1
+          fi
       - name: Record the daily reservation
         if: steps.plan.outputs.has_jobs == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
