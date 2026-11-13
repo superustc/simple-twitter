@@ -20,9 +20,7 @@ ALLOWED_PATH = re.compile(
 
 
 def command(*args, cwd=None, data=None):
-    result = subprocess.run(
-        args, cwd=cwd, input=data, stdout=subprocess.PIPE, check=True
-    )
+    result = subprocess.run(args, cwd=cwd, input=data, stdout=subprocess.PIPE, check=True)
     return result.stdout
 
 
@@ -84,6 +82,8 @@ def output(name, value):
 
 
 def plan(args):
+    if args.issue < 0:
+        raise ValueError("Use 0 for triage or a positive issue number for the pilot.")
     fields = "number,title,body,labels"
     issues = gh("issue", "list", "--state", "open", "--limit", "1000", "--json", fields)
     if args.issue and all(issue["number"] != args.issue for issue in issues):
