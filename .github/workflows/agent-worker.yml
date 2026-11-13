@@ -25,6 +25,9 @@ permissions: {}
 jobs:
   implement:
     runs-on: ubuntu-22.04
+    environment:
+      name: OPENAI_API_KEY
+      deployment: false
     timeout-minutes: 35
     permissions:
       contents: read
@@ -159,6 +162,9 @@ jobs:
   review:
     needs: verify
     runs-on: ubuntu-latest
+    environment:
+      name: OPENAI_API_KEY
+      deployment: false
     timeout-minutes: 15
     permissions:
       contents: read

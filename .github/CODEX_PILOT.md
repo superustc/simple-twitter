@@ -5,7 +5,7 @@ The workflow scans open issues and pull requests, ranks eligible tasks, assigns 
 ## Setup
 
 1. Review and merge the workflow PR. Keep the repository's existing branch protection and review rules.
-2. In **Settings → Secrets and variables → Actions**, add the `OPENAI_API_KEY` repository secret. Codex uses it for the single-issue pilot, optional AI triage, and independent review.
+2. Set `OPENAI_API_KEY` under **Settings → Environments → OPENAI_API_KEY → Environment secrets** or under **Settings → Secrets and variables → Actions → Repository secrets**. The environment secret takes precedence if both exist. Codex uses it for the single-issue pilot, optional AI triage, and independent review.
 3. Under **Settings → Actions → General → Workflow permissions**, enable **Allow GitHub Actions to create and approve pull requests**. The pipeline only creates draft pull requests.
 4. Keep `AGENT_WORKERS` unset for Codex-only operation, or set it to a comma-separated list such as `codex,claude,gemini`. Add `ANTHROPIC_API_KEY` for Claude Code and `GEMINI_API_KEY` for Gemini CLI before adding those workers. Each worker receives only its provider's secret. Codex supplies independent review for all workers.
 
