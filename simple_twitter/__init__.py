@@ -1,3 +1,5 @@
+import os
+
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
@@ -5,7 +7,9 @@ from flask_socketio import SocketIO
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///simple_twitter.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+    'SIMPLE_TWITTER_DATABASE_URI', 'sqlite:///simple_twitter.db'
+)
 
 db = SQLAlchemy(app)
 
